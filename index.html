@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activity Est</title>
+<style>
+  :root{
+    --bg:#14111f; --panel:#1f1a30; --panel2:#2a2440; --text:#f4f1ff; --muted:#a59ec2;
+    --accent:#ffcc33; --mut:#ff6b6b; --raj:#4dabf7; --kor:#51cf66; --danger:#ff4d4f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 20px;font-weight:700;color:#14111f;background:var(--accent)}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.ghost{background:var(--panel2);color:var(--text)}
+  button.small{padding:6px 12px;font-size:14px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;background:var(--panel);flex-wrap:wrap}
+  header h1{margin:0;font-size:22px;letter-spacing:.5px}
+  header h1 span{color:var(--accent)}
+  main{padding:20px;max-width:1300px;margin:0 auto}
+  .screen{display:none}
+  .screen.active{display:block}
+
+  /* Home */
+  .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .cat{background:var(--panel);border:2px solid transparent;border-radius:14px;padding:12px 14px;text-align:left;color:var(--text);display:flex;flex-direction:column;gap:6px;font-weight:600;min-height:84px}
+  .cat:hover{border-color:var(--accent)}
+  .cat .num{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+  .cat.done{opacity:.35}
+  .hint{color:var(--muted);font-size:14px;margin:0 0 12px}
+  .homeFooter{margin-top:16px;display:flex;gap:10px;justify-content:flex-end}
+
+  /* Round */
+  .round{max-width:900px;margin:0 auto;text-align:center}
+  .catTitle{font-size:clamp(22px,3.5vw,34px);margin:4px 0 4px}
+  .teamTag{color:var(--muted);margin-bottom:14px}
+  .timer{font-size:clamp(70px,14vw,140px);font-weight:900;font-variant-numeric:tabular-nums;line-height:1;margin:6px 0}
+  .timer.low{color:var(--danger);animation:pulse 1s infinite}
+  @keyframes pulse{50%{transform:scale(1.06)}}
+  .bar{height:10px;background:var(--panel2);border-radius:6px;overflow:hidden;margin:8px auto 22px;max-width:600px}
+  .bar div{height:100%;background:var(--accent);transition:width .25s linear}
+  .card{background:var(--panel);border-radius:22px;padding:28px 20px;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:relative}
+  .method{display:inline-flex;align-items:center;gap:10px;font-size:clamp(20px,3vw,28px);font-weight:800;padding:8px 22px;border-radius:999px;color:#14111f}
+  .method.mut{background:var(--mut)} .method.raj{background:var(--raj)} .method.kor{background:var(--kor)}
+  .word{font-size:clamp(34px,7vw,72px);font-weight:900;line-height:1.1;word-break:break-word}
+  .word.hidden{filter:blur(22px);user-select:none}
+  .counter{position:absolute;top:14px;right:18px;color:var(--muted);font-weight:700}
+  .controls{display:flex;gap:14px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+  .controls button{font-size:20px;padding:16px 30px;min-width:150px}
+  .controls .skip{background:var(--panel2);color:var(--text)}
+  .controls .next{background:var(--kor)}
+  .startBig{font-size:28px;padding:22px 60px;border-radius:18px}
+
+  /* Summary */
+  .sumList{display:flex;flex-direction:column;gap:10px;max-width:700px;margin:18px auto;text-align:left}
+  .sumItem{display:flex;align-items:center;gap:12px;background:var(--panel);border-radius:14px;padding:12px 16px}
+  .sumItem .w{flex:1;font-size:20px;font-weight:700}
+  .sumItem .tag{font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;color:#14111f}
+  .sumItem.skipped .w{text-decoration:line-through;color:var(--muted)}
+  .sumItem .st{font-size:13px;color:var(--muted);min-width:70px;text-align:right}
+  .toggle{display:flex;gap:6px}
+  .toggle button{padding:6px 12px;font-size:14px;background:var(--panel2);color:var(--text)}
+  .toggle button.on.yes{background:var(--kor);color:#14111f}
+  .toggle button.on.no{background:var(--danger);color:#14111f}
+  .total{font-size:26px;font-weight:800;margin:10px 0}
+  .total span{color:var(--accent)}
+  .controls[hidden]{display:none!important}
+
+  /* Hidden word (tap to reveal) */
+  .card{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+  .veil{display:none;flex-direction:column;align-items:center;gap:8px;color:var(--muted);font-weight:700;font-size:clamp(18px,4vw,24px)}
+  .veil b{font-size:clamp(44px,10vw,64px)}
+  .card.covered .veil{display:flex}
+  .card.covered #wordBox{display:none!important}
+  .revealHint{color:var(--muted);font-size:13px;margin-top:4px}
+
+  /* Mobile */
+  button{touch-action:manipulation}
+  @media (max-width:640px){
+    header{padding:10px 12px;gap:8px}
+    header h1{font-size:18px}
+    main{padding:12px 16px}
+    .cats{grid-template-columns:1fr 1fr;gap:8px}
+    .cat{min-height:70px;padding:10px;font-size:14px}
+    .homeFooter{justify-content:center;flex-wrap:wrap}
+    .card{min-height:200px;padding:22px 14px}
+    .counter{top:10px;right:12px;font-size:14px}
+    .controls{gap:8px;margin-top:14px}
+    #controls{display:grid!important;grid-template-columns:1fr 1fr;}
+    #controls[hidden]{display:none!important}
+    #controls .next{grid-column:1 / -1;order:-1;font-size:22px;padding:18px}
+    .controls button{min-width:0;font-size:17px;padding:14px 10px}
+    .startBig{font-size:24px;padding:20px 44px}
+    .sumItem{flex-wrap:wrap;gap:8px;padding:10px 12px}
+    .sumItem .w{flex:1 1 60%;font-size:17px}
+    .sumItem .toggle{width:100%}
+    .sumItem .toggle button{flex:1;padding:10px}
+    .total{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎉 Activity <span>Est</span></h1>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section class="screen active" id="home">
+    <p class="hint">Válaszd ki a kipörgetett kategóriát. A szám a még megmaradt szavakat mutatja.</p>
+    <div class="cats" id="cats"></div>
+    <div class="homeFooter">
+      <button class="ghost small" id="resetWords">Szavak visszaállítása</button>
+    </div>
+  </section>
+
+  <!-- ROUND -->
+  <section class="screen" id="round">
+    <div class="round">
+      <div class="catTitle" id="rCat"></div>
+      <div class="timer" id="timer">1:00</div>
+      <div class="bar"><div id="barFill" style="width:100%"></div></div>
+      <div class="card" id="card">
+        <div class="counter" id="counter"></div>
+        <div id="preStart">
+          <button class="startBig" id="startBtn">▶ START</button>
+          <p class="hint" style="margin-top:14px">3 szó · 1 perc · 1 passz</p>
+        </div>
+        <div class="veil"><b>👀</b>Koppints a szó megjelenítéséhez<span class="revealHint">csak a játékos nézze!</span></div>
+        <div id="wordBox" style="display:none;flex-direction:column;align-items:center;gap:16px">
+          <div class="method" id="method"></div>
+          <div class="word" id="word"></div>
+          <div class="revealHint">koppints az elrejtéshez</div>
+        </div>
+      </div>
+      <div class="controls" id="controls" hidden>
+        <button class="ghost" id="pauseBtn">⏸ Szünet</button>
+        <button class="skip" id="skipBtn">⏭ Passz (1)</button>
+        <button class="next" id="nextBtn">Következő ➜</button>
+      </div>
+      <div class="controls"><button class="ghost small" id="abortBtn">✕ Vissza a főoldalra</button></div>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="screen" id="summary">
+    <div class="round">
+      <div class="catTitle" id="sTitle">Kör vége</div>
+      <div class="teamTag" id="sSub"></div>
+      <div class="sumList" id="sumList"></div>
+      <div class="total">Kitalált: <span id="sTotal">0</span> pont</div>
+      <div class="controls"><button id="homeBtn">Vissza a kategóriákhoz</button></div>
+    </div>
+  </section>
+</main>
+
+
+<script>
+/* ===== DATA (from Sheet1 — final/"Döntő" section excluded) ===== */
+const M = ["mut","raj","kor","mut","raj","kor","mut","raj","kor"];
+const CATEGORIES = [
+  ["Fesztivál szükségletek", ["fogkefe","fejlámpa","nedves törlőkendő","napszemüveg","powerbank","gyógyszerek","wc papír","dezodor","övtáska"]],
+  ["Szuperképességek", ["láthatatlanság","időmegállítás","gondolatolvasás","falon átmenés","telekinézis","beszélgetés állatokkal","repülés","víz alatti légzés","szuper hallás"]],
+  ["Utazási célpont", ["hegyek","sivatag","dzsungel","tenger","sziget","barlang","aquapark","híres épületek","városnézés"]],
+  ["Furcsa étel kombinációk", ["fagyi sült krumplival","spagetti + kenyér","Nutellás kovászos uborka","sajtos-lekváros melegszendvics","krumplipüré lekvárral","mustáros mézes keksz","vajas kenyér cukorral","görögdinnye sajttal","ketchupos kenyér"]],
+  ["Házi feladat közbeni tevékenységek", ["TikTok/reel nézés","sírás","videóchat","táncolás","alvás","chips evés","rendrakás","játszás","üzengetés"]],
+  ["Amit nem vinnél magaddal egy lakatlan szigetre", ["anyós","fotó az exedről","rozsdás fűrész","kutya","infó házi","zongora","egy zacskó beváltható üveg","művirág","porszívócső"]],
+  ["Apokalipszis túlélőfelszerelés", ["gázmaszk","svájci bicska","elsősegélycsomag","fejsze","zseblámpa","vízszűrő kulacs","katonai bakancs","nap","erős ragasztószalag"]],
+  ["Ivós játékok", ["spin the bottle","beer pong","bárka","Kings cup","felelsz vagy mersz","ivós póker","7 perc mennyország","Chandelier","chest pong"]],
+  ["Borzalmas tetoválások", ["exednek a neve","lángoló koponya","elrontott kínai írásjel","QR kód","vonalkód","elírt idézet","kancsal tigris","fél szárny","rossz portré"]],
+  ["Kínos szituációk", ["megbotlani emberek között","árcédula a ruhán","köszönni valakinek, aki nem ismer","rossz ajtón bekopogni","koszos ing","elfelejteni valaki nevét","hangos gyomorkorgás","rossz embernek küldött üzenet","rossz elköszönés (kézfogás vs ölelés)"]],
+  ["Szakítós dumák", ["maradjunk barátok","nem illenek a csillagjegyeink","nem benned van a hiba, bennem","magamra akarok koncentrálni","olyan, mintha testvérek lennénk","a karrieremre akarok koncentrálni","túl jó vagy hozzám","visszajött az exem","elmúlt a varázs"]],
+  ["Részeg típusok", ["ölelős","hangos","bunyós","csendes","hányós","alvós","sírós","filozofálós","kötekedős"]],
+  ["Márka-logó", ["McDonald's","Spotify","Chanel","Red Bull","Ferrari","Starbucks","Android","Lego","Bluetooth"]],
+].map(([name, words]) => ({ name, words: words.map((w,i)=>({w, m:M[i]})) }));
+
+const METHOD = {
+  mut:{label:"Mutogatás", icon:"🤲"},
+  raj:{label:"Rajzolás",  icon:"✏️"},
+  kor:{label:"Körbeírás", icon:"💬"},
+};
+const ROUND_SECONDS = 60, WORDS_PER_ROUND = 3, SKIPS = 1;
+const COLORS = ["#ff6b6b","#ffa94d","#ffd43b","#a9e34b","#51cf66","#38d9a9","#3bc9db","#4dabf7","#748ffc","#9775fa","#da77f2","#f783ac","#e8590c"];
+
+/* ===== STATE (persisted) ===== */
+const KEY = "activity-night-2026";
+let S = load();
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && s.used) return s; }catch(e){}
+  return { used: CATEGORIES.map(()=>[]) };
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+const remaining = ci => CATEGORIES[ci].words.length - S.used[ci].length;
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ===== CATEGORY GRID ===== */
+const catsEl = document.getElementById("cats");
+function renderCats(){
+  catsEl.innerHTML = "";
+  CATEGORIES.forEach((c,i)=>{
+    const r = remaining(i);
+    const b = document.createElement("button");
+    b.className = "cat" + (r<WORDS_PER_ROUND ? " done":"");
+    b.style.borderLeft = `6px solid ${COLORS[i]}`;
+    b.innerHTML = `<span class="num"><span>#${i+1}</span><span>${r}/9 szó</span></span><span>${esc(c.name)}</span>`;
+    b.onclick = ()=> chooseCat(i);
+    catsEl.appendChild(b);
+  });
+}
+
+/* ===== CATEGORY PICK ===== */
+function chooseCat(ci){
+  const r = remaining(ci);
+  if(r===0){ alert("Ebben a kategóriában elfogyott minden szó."); return; }
+  if(r<WORDS_PER_ROUND && !confirm(`Ebben a kategóriában csak ${r} szó maradt. Mégis játszotok?`)) return;
+  startRound(ci);
+}
+
+/* ===== ROUND ===== */
+let R = null, timerId = null;
+const $ = id => document.getElementById(id);
+function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active", s.id===id)); }
+
+function startRound(ci){
+  R = { ci, played:[], skipsLeft:SKIPS, left:ROUND_SECONDS, running:false, paused:false, cur:null };
+  $("rCat").textContent = `#${ci+1} ${CATEGORIES[ci].name}`;
+  $("preStart").style.display=""; $("wordBox").style.display="none"; $("controls").hidden=true; $("card").classList.remove("covered");
+  $("counter").textContent=""; updTimer(); show("round");
+}
+function drawWord(){
+  const ci = R.ci, used = S.used[ci];
+  const pool = CATEGORIES[ci].words.map((_,i)=>i).filter(i=>!used.includes(i));
+  if(!pool.length) return null;
+  const wi = pool[Math.floor(Math.random()*pool.length)];
+  used.push(wi); save();
+  return wi;
+}
+function showWord(wi){
+  const w = CATEGORIES[R.ci].words[wi]; R.cur = { wi, status:"played" };
+  const m = $("method"); m.className = "method "+w.m; m.textContent = `${METHOD[w.m].icon} ${METHOD[w.m].label}`;
+  $("word").textContent = w.w;
+  $("card").classList.add("covered");
+  const n = R.played.filter(p=>p.status!=="skipped").length + 1;
+  $("counter").textContent = `${n} / ${WORDS_PER_ROUND}`;
+  $("skipBtn").textContent = `⏭ Passz (${R.skipsLeft})`;
+  $("skipBtn").disabled = R.skipsLeft<=0 || remaining(R.ci)===0;
+  $("nextBtn").textContent = n>=WORDS_PER_ROUND ? "Kész ✓" : "Következő ➜";
+}
+$("startBtn").onclick = ()=>{
+  const wi = drawWord(); if(wi===null) return;
+  $("preStart").style.display="none"; $("wordBox").style.display="flex"; $("controls").hidden=false;
+  showWord(wi); R.running=true; R.endAt = Date.now()+R.left*1000; runTimer(); tick(660,.12);
+};
+$("nextBtn").onclick = ()=>{
+  if(!R||!R.running) return;
+  R.played.push(R.cur);
+  const done = R.played.filter(p=>p.status!=="skipped").length;
+  if(done>=WORDS_PER_ROUND){ endRound(false); return; }
+  const wi = drawWord(); if(wi===null){ endRound(false); return; }
+  showWord(wi);
+};
+$("skipBtn").onclick = ()=>{
+  if(!R||!R.running||R.skipsLeft<=0) return;
+  R.cur.status="skipped"; R.played.push(R.cur); R.skipsLeft--;
+  const wi = drawWord(); if(wi===null){ endRound(false); return; }
+  showWord(wi);
+};
+$("pauseBtn").onclick = ()=>{
+  if(!R||!R.running) return;
+  if(!R.paused){ R.paused=true; R.left = Math.max(0,(R.endAt-Date.now())/1000); clearInterval(timerId); $("pauseBtn").textContent="▶ Folytatás"; $("word").classList.add("hidden"); }
+  else { R.paused=false; R.endAt=Date.now()+R.left*1000; runTimer(); $("pauseBtn").textContent="⏸ Szünet"; $("word").classList.remove("hidden"); }
+};
+$("abortBtn").onclick = ()=>{
+  if(R && R.running && !confirm("Megszakítod a kört? (A már mutatott szavak elhasználtnak számítanak.)")) return;
+  stopTimer(); R=null; goHome();
+};
+function runTimer(){
+  clearInterval(timerId);
+  timerId = setInterval(()=>{
+    R.left = Math.max(0,(R.endAt-Date.now())/1000); updTimer();
+    const s = Math.ceil(R.left);
+    if(s<=5 && s>0 && s!==R.lastBeep){ R.lastBeep=s; tick(990,.08); }
+    if(R.left<=0) endRound(true);
+  },100);
+}
+function stopTimer(){ clearInterval(timerId); timerId=null; }
+function updTimer(){
+  const s = Math.ceil(R.left);
+  $("timer").textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+  $("timer").classList.toggle("low", s<=10 && R.running);
+  $("barFill").style.width = (R.left/ROUND_SECONDS*100)+"%";
+}
+function endRound(timeUp){
+  stopTimer(); R.running=false;
+  if(timeUp && R.cur && !R.played.includes(R.cur)){ R.cur.status="timeout"; R.played.push(R.cur); }
+  if(timeUp){ tick(330,.6); } else { tick(1320,.2); }
+  $("word").classList.remove("hidden"); $("card").classList.remove("covered"); $("pauseBtn").textContent="⏸ Szünet";
+  renderSummary(timeUp);
+}
+
+/* ===== SUMMARY ===== */
+function renderSummary(timeUp){
+  $("sTitle").textContent = timeUp ? "⏰ Lejárt az idő!" : "✅ Kör vége";
+  $("sSub").textContent = `#${R.ci+1} ${CATEGORIES[R.ci].name}`;
+  const list = $("sumList"); list.innerHTML="";
+  R.played.forEach(p=>{
+    const w = CATEGORIES[R.ci].words[p.wi];
+    const d = document.createElement("div"); d.className = "sumItem"+(p.status==="skipped"?" skipped":"");
+    const tagColor = getComputedStyle(document.documentElement).getPropertyValue("--"+w.m);
+    d.innerHTML = `<span class="tag" style="background:${tagColor}">${METHOD[w.m].icon} ${METHOD[w.m].label}</span><span class="w">${esc(w.w)}</span>`;
+    if(p.status==="skipped"){ d.innerHTML += `<span class="st">passzolva</span>`; }
+    else {
+      if(p.guessed===undefined) p.guessed = false;
+      const tg = document.createElement("div"); tg.className="toggle";
+      tg.innerHTML = `<button class="yes">✓ Kitalálták</button><button class="no">✕ Nem</button>`;
+      const [y,n] = tg.children;
+      const upd=()=>{ y.classList.toggle("on",p.guessed); n.classList.toggle("on",!p.guessed); $("sTotal").textContent = R.played.filter(q=>q.guessed&&q.status!=="skipped").length; };
+      y.onclick=()=>{p.guessed=true;upd();}; n.onclick=()=>{p.guessed=false;upd();};
+      d.appendChild(tg); list.appendChild(d); upd(); return;
+    }
+    list.appendChild(d);
+  });
+  $("sTotal").textContent = R.played.filter(q=>q.guessed&&q.status!=="skipped").length;
+  show("summary");
+}
+$("card").onclick = (e)=>{ if(e.target.closest("button")) return; if(R && R.running && !R.paused) $("card").classList.toggle("covered"); };
+function goHome(){ show("home"); renderCats(); }
+$("homeBtn").onclick = ()=>{ R=null; goHome(); };
+
+$("resetWords").onclick=()=>{ if(confirm("Minden szó újra elérhető lesz. Biztos?")){ S.used = CATEGORIES.map(()=>[]); save(); goHome(); } };
+
+/* ===== SOUND ===== */
+let AC=null;
+function tick(freq,dur){
+  try{ AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(), g=AC.createGain(); o.frequency.value=freq; o.type="sine";
+    g.gain.setValueAtTime(.25,AC.currentTime); g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+dur);
+    o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime+dur);
+  }catch(e){}
+}
+
+/* keyboard: space/→ = next, S = skip, P = pause */
+document.addEventListener("keydown",e=>{
+  if(!$("round").classList.contains("active") || e.target.tagName==="INPUT") return;
+  if(!R.running && (e.key===" "||e.key==="Enter")){ e.preventDefault(); $("startBtn").click(); return; }
+  if(e.key===" "||e.key==="ArrowRight"){ e.preventDefault(); $("nextBtn").click(); }
+  else if(e.key.toLowerCase()==="s") $("skipBtn").click();
+  else if(e.key.toLowerCase()==="p") $("pauseBtn").click();
+});
+
+goHome();
+</script>
+</body>
+</html>
